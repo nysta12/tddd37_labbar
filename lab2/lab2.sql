@@ -1,30 +1,14 @@
-/*
-Lab 2 report <Student_names and liu_id>
-*/
-
-/* All non code should be within SQL-comments like this */ 
-
-
-/*
-Drop all user created tables that have been created when solving the lab
-*/
+/* Lab 2 report <Victor Nyström vicny135, Oliver Öberg oliob926> */
 
 DROP TABLE IF EXISTS custom_table CASCADE;
-
-
-/* Have the source scripts in the file so it is easy to recreate!*/
 
 SOURCE company_schema.sql;
 SOURCE company_data.sql;
 
 
-
-/*
-Question 1:
-*/
-select jbemployee.*
-from jbemployee;
-/*
+/* Question 1: */
+select * from jbemployee;
+/* Output:
 +------+--------------------+--------+---------+-----------+-----------+
 | id   | name               | salary | manager | birthyear | startyear |
 +------+--------------------+--------+---------+-----------+-----------+
@@ -58,12 +42,9 @@ from jbemployee;
 */ 
 
 
-/*
-Question 2:
-*/
-select jbdept.name
-from jbdept order by jbdept.name;
-/*
+/* Question 2: */
+select jbdept.name from jbdept order by jbdept.name;
+/* Output:
 +------------------+
 | name             |
 +------------------+
@@ -91,13 +72,9 @@ from jbdept order by jbdept.name;
 */
 
 
-/*
-Question 3:
-*/
-select jbparts.*
-from jbparts
-where jbparts.qoh=0;
-/*
+/* Question 3: */
+select * from jbparts where jbparts.qoh = 0;
+/* Output:
 +----+-------------------+-------+--------+------+
 | id | name              | color | weight | qoh  |
 +----+-------------------+-------+--------+------+
@@ -110,13 +87,10 @@ where jbparts.qoh=0;
 */
 
 
-/*
-Question 4:
-*/
-select jbemployee.*
-from jbemployee
+/* Question 4: */
+select * from jbemployee
 where(jbemployee.salary >= 9000 and jbemployee.salary <= 10000);
-/*
+/* Output:
 +-----+----------------+--------+---------+-----------+-----------+
 | id  | name           | salary | manager | birthyear | startyear |
 +-----+----------------+--------+---------+-----------+-----------+
@@ -129,15 +103,11 @@ where(jbemployee.salary >= 9000 and jbemployee.salary <= 10000);
 */
 
 
-/*
-Question 5:
-*/
-
-select jbemployee.*, (jbemployee.startyear - jbemployee.birthyear) as startingYear
-from jbemployee;
-/*
+/* Question 5: */
+select *, (jbemployee.startyear - jbemployee.birthyear) as startingyear from jbemployee;
+/* Output:
 +------+--------------------+--------+---------+-----------+-----------+--------------+
-| id   | name               | salary | manager | birthyear | startyear | startingYear |
+| id   | name               | salary | manager | birthyear | startyear | startingyear |
 +------+--------------------+--------+---------+-----------+-----------+--------------+
 |   10 | Ross, Stanley      |  15908 |     199 |      1927 |      1945 |           18 |
 |   11 | Ross, Stuart       |  12067 |    NULL |      1931 |      1932 |            1 |
@@ -165,17 +135,13 @@ from jbemployee;
 | 5119 | Bono, Sonny        |  13621 |      55 |      1939 |      1963 |           24 |
 | 5219 | Schwarz, Jason B.  |  13374 |      33 |      1944 |      1959 |           15 |
 +------+--------------------+--------+---------+-----------+-----------+--------------+
-25 rows in set (0.01 sec)
+25 rows in set (0.00 sec)
 */
 
 
-/*
-Question 6:
-*/
-select jbemployee.*
-from jbemployee
-where jbemployee.name like "%son,%";
-/*
+/* Question 6: */
+select * from jbemployee where jbemployee.name like "%son,%";
+/* Output:
 +----+---------------+--------+---------+-----------+-----------+
 | id | name          | salary | manager | birthyear | startyear |
 +----+---------------+--------+---------+-----------+-----------+
@@ -185,14 +151,10 @@ where jbemployee.name like "%son,%";
 */
 
 
-/*
-Question 7:
-*/
-select jbitem.*
-from jbitem
-where jbitem.supplier in 
+/* Question 7: */
+select * from jbitem where jbitem.supplier in 
 (select jbsupplier.id from jbsupplier where jbsupplier.name = "Fisher-Price");
-/*
+/* Output:
 +-----+-----------------+------+-------+------+----------+
 | id  | name            | dept | price | qoh  | supplier |
 +-----+-----------------+------+-------+------+----------+
@@ -204,13 +166,10 @@ where jbitem.supplier in
 */
 
 
-/*
-Question 8:
-*/
-select jbitem.*
-from jbitem left join jbsupplier on jbitem.supplier = jbsupplier.id
+/* Question 8: */
+select * from jbitem left join jbsupplier on jbitem.supplier = jbsupplier.id
 where jbsupplier.name = "Fisher-Price";
-/*
+/* Output:
 +-----+-----------------+------+-------+------+----------+
 | id  | name            | dept | price | qoh  | supplier |
 +-----+-----------------+------+-------+------+----------+
@@ -222,14 +181,10 @@ where jbsupplier.name = "Fisher-Price";
 */
 
 
-/*
-Question 9:
-*/
-select jbcity.*
-from jbcity
-where jbcity.id in
+/* Question 9: */
+select * from jbcity where jbcity.id in
 (select jbsupplier.city from jbsupplier where jbsupplier.city = jbcity.id);
-/*
+/* Output:
 +-----+----------------+-------+
 | id  | name           | state |
 +-----+----------------+-------+
@@ -253,14 +208,10 @@ where jbcity.id in
 */
 
 
-/*
-Question 10:
-*/
-select jbparts.name, jbparts.color
-from jbparts
-where jbparts.weight >
-(select jbparts.weight from jbparts where jbparts.name = "card reader");
-/*
+/* Question 10: */
+select jbparts.name, jbparts.color from jbparts
+where jbparts.weight > (select jbparts.weight from jbparts where jbparts.name = "card reader");
+/* Output:
 +--------------+--------+
 | name         | color  |
 +--------------+--------+
@@ -273,14 +224,9 @@ where jbparts.weight >
 */
 
 
-
-/*
-Question 11:
-*/
-select x.name, x.color
-from jbparts as x, jbparts as y
-where x.weight > y.weight and y.name = "card reader";
-/*
+/* Question 11: */
+select x.name, x.color from jbparts as x, jbparts as y where x.weight > y.weight and y.name = "card reader";
+/* Output:
 +--------------+--------+
 | name         | color  |
 +--------------+--------+
@@ -293,13 +239,9 @@ where x.weight > y.weight and y.name = "card reader";
 */
 
 
-/*
-Question 12:
-*/
-select avg(jbparts.weight)
-from jbparts
-where jbparts.color = "black";
-/*
+/* Question 12: */
+select avg(jbparts.weight) from jbparts where jbparts.color = "black";
+/* Output:
 +---------------------+
 | avg(jbparts.weight) |
 +---------------------+
@@ -309,17 +251,13 @@ where jbparts.color = "black";
 */
 
 
-/*
-Question 13:
-*/
-select jbsupplier.name, sum(jbsupply.quan * jbparts.weight) as totalweight
-from jbsupplier
+/* Question 13: */
+select jbsupplier.name, sum(jbsupply.quan * jbparts.weight) as totalweight from jbsupplier
 join jbsupply on jbsupplier.id = jbsupply.supplier
 join jbparts on jbsupply.part = jbparts.id 
 join jbcity on jbsupplier.city = jbcity.id
-where jbcity.state = "Mass"
-group by jbsupplier.name;
-/*
+where jbcity.state = "Mass" group by jbsupplier.name;
+/* Output:
 +--------------+-------------+
 | name         | totalweight |
 +--------------+-------------+
@@ -330,28 +268,17 @@ group by jbsupplier.name;
 */
 
 
-/*
-Question 14:
-*/
-create table newjbitems
-(id int primary key,
-name varchar(100),
-dept int,
-price int,
-qoh int,
-supplier int,
-foreign key(dept) references jbdept(id),
-foreign key(supplier) references jbsupplier(id));
-/*
-Query OK, 0 rows affected (0.05 sec)
-*/
+/* Question 14: */
+create table newjbitems(id int primary key, name varchar(100), dept int, price int, qoh int, supplier int,
+foreign key(dept) references jbdept(id), foreign key(supplier) references jbsupplier(id));
+/* Output:
+Query OK, 0 rows affected (0.05 sec) */
 insert into newjbitems select * from jbitem where jbitem.price < (select avg(jbitem.price) from jbitem);
-/*
+/* Output:
 Query OK, 14 rows affected (0.00 sec)
-Records: 14  Duplicates: 0  Warnings: 0
-*/
+Records: 14  Duplicates: 0  Warnings: 0 */
 select * from newjbitems;
-/*
+/* Output:
 +-----+-----------------+------+-------+------+----------+
 | id  | name            | dept | price | qoh  | supplier |
 +-----+-----------------+------+-------+------+----------+
@@ -374,17 +301,12 @@ select * from newjbitems;
 */
 
 
-/*
-Question 15:
-*/
-create view jbitemview as
-select * from jbitem where jbitem.price < 
-(select avg(jbitem.price) from jbitem);
-/*
-Query OK, 0 rows affected (0.00 sec)
-*/
+/* Question 15: */
+create view jbitemview as select * from jbitem where jbitem.price <  (select avg(jbitem.price) from jbitem);
+/* Output:
+Query OK, 0 rows affected (0.00 sec) */
 select avg(jbitem.price) from jbitem;
-/*
+/* Output:
 +-------------------+
 | avg(jbitem.price) |
 +-------------------+
@@ -393,7 +315,7 @@ select avg(jbitem.price) from jbitem;
 1 row in set (0.00 sec)
 */
 select * from jbitemview;
-/*
+/* Output:
 +-----+-----------------+------+-------+------+----------+
 | id  | name            | dept | price | qoh  | supplier |
 +-----+-----------------+------+-------+------+----------+
@@ -416,31 +338,24 @@ select * from jbitemview;
 */
 
 
-/*
-Question 16:
-*/
-/*
+/* Question 16: */
+/* Answer:
 A table is static since it stores the data that will remain the same unless someone explicitly modifies it with some statement similar
 to how we did in question 14 where we modified the table with insert.
 
 A view is dynamic, you could say that it is a stored query, a select statement that has been saved in the database.
 A view is dynamic since it will change and reflect the table its from.
 It will essentially update itself to reflect the table it's from if the table is modified.
+*/
 
 
-/*
-Question 17:
-*/
-create view totaldebitcosts as
-select jbsale.debit, SUM(jbitem.price * jbsale.quantity) as totalcost
-from jbsale, jbitem
-where jbsale.item = jbitem.id
-group by jbsale.debit;
-/*
-Query OK, 0 rows affected (0.01 sec)
-*/
+/* Question 17: */
+create view totaldebitcosts as select jbsale.debit, SUM(jbitem.price * jbsale.quantity) as totalcost
+from jbsale, jbitem where jbsale.item = jbitem.id group by jbsale.debit;
+/* Output:
+Query OK, 0 rows affected (0.01 sec) */
 select * from totaldebitcosts;
-/*
+/* Output:
 +--------+-----------+
 | debit  | totalcost |
 +--------+-----------+
@@ -455,19 +370,13 @@ select * from totaldebitcosts;
 */
 
 
-/*
-Question 18:
-*/
-create view totaldebitcosts2 as
-select jbsale.debit, SUM(jbitem.price * jbsale.quantity) as totalcost
-from jbsale
-inner join jbitem on jbsale.item = jbitem.id
-group by jbsale.debit;
-/*
-Query OK, 0 rows affected (0.00 sec)
-*/
+/* Question 18: */
+create view totaldebitcosts2 as select jbsale.debit, SUM(jbitem.price * jbsale.quantity) as totalcost
+from jbsale inner join jbitem on jbsale.item = jbitem.id group by jbsale.debit;
+/* Output:
+Query OK, 0 rows affected (0.00 sec) */
 select * from totaldebitcosts2;
-/*
+/* Output:
 +--------+-----------+
 | debit  | totalcost |
 +--------+-----------+
@@ -480,7 +389,7 @@ select * from totaldebitcosts2;
 +--------+-----------+
 6 rows in set (0.00 sec)
 */
-/*
+/* Answer:
 We used inner join since we think it's the best alternative for this case. 
 Inner join is like taking the intersecting values between two sets.
 And since we only want the rows where there is a corresponding debit value for both jbsale and jbitem, inner join is the correct
@@ -488,19 +397,16 @@ join statement to use for our case.
 */
 
 
-/*
-Question 19:
-*/
-/*jbsale*/
+/* Question 19: */
+/* jbsale */
 delete jbsale from jbsale where jbsale.item in
 (select jbitem.id from jbitem where jbitem.supplier in
 (select jbsupplier.id from jbsupplier where jbsupplier.city in
 (select jbcity.id from jbcity where jbcity.name = "Los Angeles")));
-/*
-Query OK, 1 row affected (0.01 sec)
-*/
+/* Output:
+Query OK, 1 row affected (0.01 sec) */
 select * from jbsale;
-/*
+/* Output:
 +--------+------+----------+
 | debit  | item | quantity |
 +--------+------+----------+
@@ -514,15 +420,14 @@ select * from jbsale;
 +--------+------+----------+
 7 rows in set (0.00 sec)
 */
-/*jbitem*/
+/* jbitem */
 delete jbitem from jbitem where jbitem.supplier in
 (select jbsupplier.id from jbsupplier where jbsupplier.city in
 (select jbcity.id from jbcity where jbcity.name = "Los Angeles"));
-/*
-Query OK, 2 rows affected (0.00 sec)
-*/
+/* Output:
+Query OK, 2 rows affected (0.00 sec) */
 select * from jbitem;
-/*
+/* Output:
 +-----+-----------------+------+-------+------+----------+
 | id  | name            | dept | price | qoh  | supplier |
 +-----+-----------------+------+-------+------+----------+
@@ -547,15 +452,14 @@ select * from jbitem;
 +-----+-----------------+------+-------+------+----------+
 18 rows in set (0.00 sec)
 */
-/*newjbitems*/
+/* newjbitems */
 delete newjbitems from newjbitems where newjbitems.supplier in
 (select jbsupplier.id from jbsupplier where jbsupplier.city in
 (select jbcity.id from jbcity where jbcity.name = "Los Angeles"));
-/*
-Query OK, 1 row affected (0.01 sec)
-*/
+/* Output:
+Query OK, 1 row affected (0.01 sec) */
 select * from newjbitems;
-/*
+/* Output:
 +-----+-----------------+------+-------+------+----------+
 | id  | name            | dept | price | qoh  | supplier |
 +-----+-----------------+------+-------+------+----------+
@@ -575,14 +479,13 @@ select * from newjbitems;
 +-----+-----------------+------+-------+------+----------+
 13 rows in set (0.00 sec)
 */
-/*jbsupplier*/
+/* jbsupplier */
 delete jbsupplier from jbsupplier where jbsupplier.city in
 (select jbcity.id from jbcity where jbcity.name = "Los Angeles");
-/*
-Query OK, 1 row affected (0.00 sec)
-*/
+/* Output:
+Query OK, 1 row affected (0.00 sec) */
 select * from jbsupplier;
-/*
+/* Output:
 +-----+--------------+------+
 | id  | name         | city |
 +-----+--------------+------+
@@ -606,10 +509,31 @@ select * from jbsupplier;
 */
 
 
-/*
-Question 20:
+/* Question 20: */
+create view jbsale_supply(supplier, item, quantity) as select jbsupplier.name, jbitem.name, jbsale.quantity
+from jbsupplier left join jbitem on jbitem.supplier = jbsupplier.id left join jbsale on jbsale.item = jbitem.id;
+/* Output:
+Query OK, 0 rows affected (0.00 sec) */
+select supplier, sum(quantity) as sum from jbsale_supply group by supplier;
+/* Output:
++--------------+------+
+| supplier     | sum  |
++--------------+------+
+| A E Neumann  | NULL |
+| Amdahl       | NULL |
+| Cannon       |    6 |
+| Data General | NULL |
+| DEC          | NULL |
+| Edger        | NULL |
+| Fisher-Price | NULL |
+| IBM          | NULL |
+| Levi-Strauss |    1 |
+| Playskool    |    2 |
+| Spooley      | NULL |
+| White Paper  | NULL |
+| White Stag   |    4 |
+| Whitman's    |    2 |
+| Wormley      | NULL |
++--------------+------+
+15 rows in set (0.00 sec)
 */
-
-
-
-
