@@ -213,11 +213,14 @@ delimiter ;
 
 /* ------ Create functions ------ */
 delimiter //
-
 create function calculateFreeSeats(flightnumber int)
 returns int
 begin
-
+    declare booked_seats int;
+    declare free_seats int;
+    set booked_seats = (Select Count(*) from Booking where Booking.reservation_number in (Select Reservation.reservation_number from Reservation where Reservation.flight = flightnumber));
+    set free_seats = 40 - booked_seats;
+    return free_seats;
 end;
 //
 
