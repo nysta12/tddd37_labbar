@@ -228,11 +228,30 @@ end;
 create function calculatePrice(flightnumber int)
 returns double
 begin
-    declare price double;
-    set price = (select Route.route_price * Day.pricing_factor * ((((40 - calculateFreeSeats(flightnumber)) + 1) / 40)) * Year.profit_factor
-    from Weekly_schedule
+    declare w_id int;
+    declare r int;
+    declare d int;
+    declare y int;
+    
+    declare rp double;
+    declare wf double;
+    declare pf double;
+    declare total_price double;
+    
+    
+    select Flight.week_id into w_id from Flight where Flight.flight_number = flightnumber;
+    
+    select Weekly_schedule.route, Weekly_schedule.day into r, d from Weekly_schedule where w_id = Weekly_schedule.week_id;
 
-    return round(price, 3);
+    select Route.route_price into rp from Route where Route.route_id = r;
+    
+    select Day.pricing_factor, Day.year into wf, y from Day where Day.day_id = d;
+    
+    select Year.profit_factor into pf where Year.year_id = y;
+
+
+	return round((r * wf * (((40 - calculateFreeSeats(flightnumber)) + 1) / 40) * pf), 2);
+
 end;
 //
 
