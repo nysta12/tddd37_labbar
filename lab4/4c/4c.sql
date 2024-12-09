@@ -161,84 +161,78 @@ alter table Reserved_passengers add constraint fk_reserved_passengers_passport_n
 
 /* ------ Create procedures ------ */
 delimiter //
+
 create procedure addYear (in year int, in factor double)
 begin
     insert into Year (year_id, profit_factor)
     values (year, factor);
 end;
 //
-delimiter;
 
-delimiter //
 create procedure addDay (in year int, in day varchar(30), in factor double)
 begin
     insert into Day (day_id, year, pricing_factor)
     values (day, year, factor);
 end;
 //
-delimiter;
 
-delimiter //
 create procedure addDestination (in airport_code varchar(3), in name varchar(30), in country varchar(30))
 begin
     insert into Airport (airport_code, airport_name, country)
     values (code, name, country);
 end;
 //
-delimiter;
 
-delimiter //
 create procedure addRoute (in departure_airport_code VARCHAR(3), in arrival_airport_code VARCHAR(3), in year int, in routeprice double)
 begin
     insert into Route (departure, arrival, year_id, route_price)
     values (departure_airport_code, arrival_airport_code, year, routeprice);
 end;
 //
-delimiter;
 
-delimiter //
 create procedure addFlight (in departure_airport_code varchar(3), in arrival_airport_code varchar(3), in year int, in day varchar(30), in departuretime time)
 begin
 	declare week_nr int;
     set week_nr = 1;
     
     insert into Weekly_schedule(week_id, departure_time, route, day)
-    values (day, departuretime,
-    (select Route.route_id from Route
-    where departure_airport_code = Route.departure and arrival_airport_code = Route.arrival and year = Route.year_id));
+    values (null, departuretime,
+    (select Route.route_id from Route where departure_airport_code = Route.departure and arrival_airport_code = Route.arrival and year = Route.year_id)
+    , day);
     
-    loop
-		insert into Flight values (NULL, week_nr, (select max(id) from weeklyschedule));
-		if week_nr > 52 then
-			leave;
-		end if;
-        set week_nr = week_nr + 1
-	end loop;
-
+    while week_nr <= 52 do
+		insert into Flight values (NULL, week_nr, (select max(week_id) from Weekly_schedule));
+        set week_nr = week_nr + 1;
+	end while;
 end;
 //
-delimiter;
+
+delimiter ;
 
 
 
 /* ------ Create functions ------ */
 delimiter //
+
 create function calculateFreeSeats(flightnumber int)
 returns int
 begin
-    
+
 end;
 //
-delimiter ;
 
 
-delimiter //
 create function calculatePrice(flightnumber int)
 returns double
 begin
-    
+    declare price double;
+    set price = (select Route.route_price * Day.pricing_factor * ((((40 - calculateFreeSeats(flightnumber)) + 1) / 40)) * Year.profit_factor
+    from Weekly_schedule
+
+    return round(price, 3);
 end;
 //
+
 delimiter ;
 
 
