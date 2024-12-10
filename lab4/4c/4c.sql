@@ -34,7 +34,7 @@ drop function if exists calculatePrice;
 
 /* ------ Create tables ------ */
 create table Reservation(
-reservation_number int,
+reservation_number int not null auto_increment,
 flight int,
 contact int,
 constraint pk_reservation
@@ -159,7 +159,7 @@ alter table Reserved_passengers add constraint fk_reserved_passengers_reservatio
 alter table Reserved_passengers add constraint fk_reserved_passengers_passport_number foreign key (passport_number) references Passenger (passport_number);
 
 
-/* ------ Create procedures ------ */
+/* ------ Create procedures for populating the database with flights and more ------ */
 delimiter //
 
 create procedure addYear (in year int, in factor double)
@@ -232,30 +232,85 @@ begin
     declare r int;
     declare d int;
     declare y int;
-    
     declare rp double;
     declare wf double;
     declare pf double;
     declare total_price double;
     
-    
     select Flight.week_id into w_id from Flight where Flight.flight_number = flightnumber;
-    
     select Weekly_schedule.route, Weekly_schedule.day into r, d from Weekly_schedule where w_id = Weekly_schedule.week_id;
-
     select Route.route_price into rp from Route where Route.route_id = r;
-    
     select Day.pricing_factor, Day.year into wf, y from Day where Day.day_id = d;
-    
     select Year.profit_factor into pf where Year.year_id = y;
-
-
+    
 	return round((r * wf * (((40 - calculateFreeSeats(flightnumber)) + 1) / 40) * pf), 2);
 
 end;
 //
 
 delimiter ;
+
+
+
+/* ------ Create trigger ------ */
+
+
+
+
+
+/* ------ Create procedures for creating and handling a reservation from the front end ------ */
+delimiter //
+
+create procedure addReservation (in departure_airport_code varchar(3), in arrival_airport_code varchar(3),
+in input_year int, in input_week int, in input_day varchar(30), in dep_time time, in number_of_passengers int, out output_reservation_nr int)
+begin
+	
+    declare flight_nr int default 0;
+    declare free_seats int;
+
+	select Flight.flight_number into flight_nr from Flight where Flight.week_number = input_week and Flight.week_id =
+    (select Weekly_schedule.week_id where Weekly_schedule.departure_time = dep_time and Weekly_schedule.day = input_day and
+    Weekly_schedule.route = (select Route.route_id from Route where Route.year_id = input_year and
+    Route.arrival = arrival_airport_code and Route.departure = departure_airport_code));
+    
+    if flight_nr = 0 then
+		select "There exist no flight for the given route, date and time" as "Message";
+        
+    else
+        select calculateFreeSeats(flight_nr) into free_seats;
+        if free_seats < number_of_passengers then
+            select "There are not enough seats available on the chosen flight" as "Message";
+            set reservation_number = null;
+            
+        else
+            insert into Reservation (flight) values (flight_nr);
+            set reservationnumber = last_insert_id(); /*Using auto increment on reservation_number in Reservation so just take last inserted*/
+        end if;
+        
+    end if;
+end;
+//
+
+
+create procedure addPassenger (in reservation_nr int, in passport_number int, in passenger_name varchar(30))
+begin
+
+end;
+//
+
+
+create procedure addContact (in reservation_nr int, in passport_number int, in email varchar(30), in phone bigint)
+begin
+
+end;
+//
+
+
+create procedure addPayment (in reservation_nr int, in cardholder_name varchar(30), in credit_card_number bigint)
+begin
+
+end;
+//
 
 
 
