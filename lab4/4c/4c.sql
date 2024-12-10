@@ -253,8 +253,16 @@ delimiter ;
 
 
 /* ------ Create trigger ------ */
+delimiter //
 
+create trigger trig
+before insert on ticket for each row
+begin
 
+end;
+//
+
+delimiter ;
 
 
 
