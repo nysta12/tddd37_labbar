@@ -218,7 +218,7 @@ returns int
 begin
     declare booked_seats int;
     declare free_seats int;
-    set booked_seats = (Select Count(*) from Booking where Booking.reservation_number in (Select Reservation.reservation_number from Reservation where Reservation.flight = flightnumber));
+    set booked_seats = (select Count(*) from Booking where Booking.reservation_number in (select Reservation.reservation_number from Reservation where Reservation.flight = flightnumber));
     set free_seats = 40 - booked_seats;
     return free_seats;
 end;
@@ -258,7 +258,13 @@ delimiter //
 create trigger trig
 before insert on ticket for each row
 begin
-
+	declare t_nr int;
+    
+    repeat
+		set t_nr = floor(100 * rand());
+        until not exists (select 1 from ticket where ticket_number = t_nr)
+    end repeat;
+    set new.ticket_number = t_nr;
 end;
 //
 
@@ -324,6 +330,28 @@ end;
 
 
 /* ------ Question 8 ------ */
+/* a) How can you protect the credit card information in the database from hackers?
+
+Answer: There are multiple ways you can protect that information, first of you could limit the access by assigning special access privileges.
+You could also encrypt the information or use hashing on sensitive and vulnerable credit card data.
+*/
+
+
+/* b) Give three advantages of using stored procedures in the database (and thereby
+execute them on the server) instead of writing the same functions in the
+frontend of the system (in for example JavaScript on a Web page)?
+
+Answer: 
+1. The procedure calls are quick and efficient since they are only stored and compiled once.
+The executable code is also automatically cached, therefore it will lower the memory requirements.
+
+2. Updating a stored procedure in the database automatically will apply changes to all applications using it.
+Which will lead to avoiding the need to redeploy front-end code.
+
+3. One statement can trigger several statements inside the procedure which results in more efficient queries.
+*/
+
+
 
 
 
