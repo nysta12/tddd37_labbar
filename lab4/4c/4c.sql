@@ -197,11 +197,11 @@ begin
     
     insert into Weekly_schedule(week_id, departure_time, route, day)
     values (null, departuretime,
-    (select Route.route_id from Route where departure_airport_code = Route.departure and arrival_airport_code = Route.arrival and year = Route.year_id)
+    (select route_id from Route where departure_airport_code = departure and arrival_airport_code = arrival and year = year_id)
     , day);
     
     while week_nr <= 52 do
-		insert into Flight values (NULL, week_nr, (select max(week_id) from Weekly_schedule));
+		insert into Flight values (null, week_nr, (select max(week_id) from Weekly_schedule));
         set week_nr = week_nr + 1;
 	end while;
 end;
@@ -218,7 +218,7 @@ returns int
 begin
     declare booked_seats int;
     declare free_seats int;
-    set booked_seats = (select Count(*) from Booking where Booking.reservation_number in (select Reservation.reservation_number from Reservation where Reservation.flight = flightnumber));
+    set booked_seats = (select count(*) from Booking where reservation_number in (select reservation_number from Reservation where flight = flightnumber));
     set free_seats = 40 - booked_seats;
     return free_seats;
 end;
@@ -237,11 +237,11 @@ begin
     declare pf double;
     declare total_price double;
     
-    select Flight.week_id into w_id from Flight where Flight.flight_number = flightnumber;
-    select Weekly_schedule.route, Weekly_schedule.day into r, d from Weekly_schedule where w_id = Weekly_schedule.week_id;
-    select Route.route_price into rp from Route where Route.route_id = r;
-    select Day.pricing_factor, Day.year into wf, y from Day where Day.day_id = d;
-    select Year.profit_factor into pf where Year.year_id = y;
+    select week_id into w_id from Flight where Flight.flight_number = flightnumber;
+    select route, day into r, d from Weekly_schedule where week_id = w_id;
+    select route_price into rp from Route where route_id = r;
+    select pricing_factor, year into wf, y from Day where day_id = d;
+    select profit_factor into pf from Year where year_id = y;
     
 	return round((r * wf * (((40 - calculateFreeSeats(flightnumber)) + 1) / 40) * pf), 2);
 
@@ -256,13 +256,13 @@ delimiter ;
 delimiter //
 
 create trigger trig
-before insert on ticket for each row
+before insert on Has_ticket for each row
 begin
 	declare t_nr int;
     
     repeat
 		set t_nr = floor(100 * rand());
-        until not exists (select 1 from ticket where ticket_number = t_nr)
+        until not exists (select 1 from Has_ticket where ticket_number = t_nr)
     end repeat;
     set new.ticket_number = t_nr;
 end;
@@ -282,47 +282,68 @@ begin
     declare flight_nr int default 0;
     declare free_seats int;
 
-	select Flight.flight_number into flight_nr from Flight where Flight.week_number = input_week and Flight.week_id =
-    (select Weekly_schedule.week_id where Weekly_schedule.departure_time = dep_time and Weekly_schedule.day = input_day and
-    Weekly_schedule.route = (select Route.route_id from Route where Route.year_id = input_year and
-    Route.arrival = arrival_airport_code and Route.departure = departure_airport_code));
+	select flight_number into flight_nr from Flight where week_number = input_week and week_id =
+    (select week_id from Weekly_schedule where departure_time = dep_time and day = input_day and route =
+    (select route_id from Route where year_id = input_year and arrival = arrival_airport_code and departure = departure_airport_code));
     
     if flight_nr = 0 then
 		select "There exist no flight for the given route, date and time" as "Message";
-        
     else
         select calculateFreeSeats(flight_nr) into free_seats;
         if free_seats < number_of_passengers then
             select "There are not enough seats available on the chosen flight" as "Message";
             set reservation_number = null;
-            
         else
-            insert into Reservation (flight) values (flight_nr);
+            insert into Reservation (Reservation.flight)
+            values (flight_nr);
             set reservationnumber = last_insert_id(); /*Using auto increment on reservation_number in Reservation so just take last inserted*/
         end if;
-        
     end if;
 end;
 //
 
 
-create procedure addPassenger (in reservation_nr int, in passport_number int, in passenger_name varchar(30))
+create procedure addPassenger (in reservation_nr int, in passport_nr int, in passenger_name varchar(30))
 begin
-
+	if exists (select 1 from Booking where reservation_number = reservation_nr) then
+		select "The booking has already been payed and no futher passengers can be added" as "Message";
+	else
+		if not exists (select 1 from Passenger where passport_number = passport_nr) then
+			insert into Passenger (Passenger.passport_number, Passenger.passenger_name)
+			values(passport_nr, passenger_name);
+		end if;
+		if not exists (select 1 from Reservation where reservation_number = reservation_nr) then
+			select "The given reservation number does not exist" as "Message";
+		else
+			insert into Reserved_passengers (Reserved_passengers.reservation_number, Reserved_passengers.passport_number) 
+			values(reservation_nr, passport_nr);
+		end if;
+	end if;
 end;
 //
 
 
-create procedure addContact (in reservation_nr int, in passport_number int, in email varchar(30), in phone bigint)
+create procedure addContact (in reservation_nr int, in passport_nr int, in email varchar(30), in phone bigint)
 begin
-
+	if not exists (select 1 from Reservation where reservation_number = reservation_nr) then
+		select "The given reservation number does not exist" as "Message";
+    else
+		if not exists (select 1 from Reserved_passengers where passport_number = passport_nr and reservation_number = reservation_nr) then
+			select "The person is not a passenger of the reservation" as "Message";
+		else
+			if not exists (select 1 from Contact where passport_number = passport_nr) then
+				insert into Contact (Contact.email, Contact.phone_number, Contact.passport_number)
+				values(email, phone, passport_nr);
+			end if;
+		end if;
+	end if;
 end;
 //
 
 
 create procedure addPayment (in reservation_nr int, in cardholder_name varchar(30), in credit_card_number bigint)
 begin
-
+	
 end;
 //
 
