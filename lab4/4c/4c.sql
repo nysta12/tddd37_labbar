@@ -348,6 +348,17 @@ end;
 //
 
 
+/* ------ Create view ------ */
+create view allFlights as
+	select departure_airport.airport_name as "departure_city_name", arrival_airport.airport_name as "destination_city_name",
+	weekly_schedule.departure_time as "departure_time", Weekly_schedule.day as "departure_day", Flight.week_number as "departure_week", Day.year as "departure_year",
+	calculateFreeSeats(Flight.flight_number) as "nr_of_free_seats", calculatePrice(Flight.flight_number) as "current_price_per_seat"
+    from Airport as departure_airport, Airport as arrival_airport, Weekly_schedule, Flight, Day
+    where departure_airport.airportcode = (select departure from Route where route_id = Weekly_schedule.route)
+    and arrival_airport.airportcode = (select arrival from Route where route_id = Weekly_schedule.route)
+    and Weekly_schedule.week_id = Flight.week_id
+    and Weekly_schedule.day = Day.day_id;
+
 
 
 /* ------ Question 8 ------ */
