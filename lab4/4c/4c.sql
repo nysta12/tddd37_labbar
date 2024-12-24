@@ -343,7 +343,38 @@ end;
 
 create procedure addPayment (in reservation_nr int, in cardholder_name varchar(30), in credit_card_number bigint)
 begin
-	
+	declare nr_passengers_reservation int;
+    declare free_seats int;
+    declare flight_nr int;
+    declare price_reservation int;
+    
+	if not exists (select 1 from Reservation where reservation_number = reservation_nr) then
+		select "The given reservation number does not exist" as "Message";
+	else
+		if not exists (select contact from Reservation where reservation_number = reservation_nr) then
+			select "The reservation has no contact yet" as "Message";
+		else
+			select count(*) into nr_passengers_reservation from Reserved_passengers where reservation_number = reservation_nr;
+			select flight into flight_nr from Reservation where reservation_number = reservation_nr;
+			set free_seats = calculateFreeSeats(flight_nr);
+            
+            if (free_seats >= nr_passengers_reservation) then
+				set price_reservation = nr_passengers_reservation * calculatePrice(flight_nr);
+                
+				insert into Payment (Payment.card_holder, Payment.card_number)
+				values (cardholder_name, credit_card_number);
+                
+				insert into Booking (Booking.person_paying, Booking.paid_price, Booking.reservation_number)
+                values (max(Payment.payment_id), price_reservation, reservation_nr); 
+        
+				insert into Has_ticket (Has_ticket.booking, Has_ticket.passenger)
+				select reservation_number, passport_number from Reserved_passengers where reservation_number = reservation_nr;
+			else
+				delete from Reservation where reservation_number = reservation_nr;
+				select "There are not enough seats available on the flight anymore, deleting reservation" as "Message";
+            end if;
+		end if;
+	end if;
 end;
 //
 
