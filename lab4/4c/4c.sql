@@ -1,18 +1,19 @@
+set foreign_key_checks = 0;
 /* ------ Drop tables ------*/
-drop table if exists Reservation cascade;
-drop table if exists Booking cascade;
-drop table if exists Payment cascade;
-drop table if exists Passenger cascade;
-drop table if exists Has_ticket cascade;
-drop table if exists Contact cascade;
-drop table if exists Flight cascade;
-drop table if exists Weekly_schedule cascade;
-drop table if exists Route cascade;
-drop table if exists Airport cascade;
-drop table if exists Has_route cascade;
-drop table if exists Year cascade;
-drop table if exists Day cascade;
-drop table if exists Reserved_passengers cascade;
+drop table if exists Reservation;
+drop table if exists Booking;
+drop table if exists Payment;
+drop table if exists Passenger;
+drop table if exists Has_ticket;
+drop table if exists Contact;
+drop table if exists Flight;
+drop table if exists Weekly_schedule;
+drop table if exists Route;
+drop table if exists Airport;
+drop table if exists Has_route;
+drop table if exists Year;
+drop table if exists Day;
+drop table if exists Reserved_passengers;
 
 
 /* ------ Drop procedures ------ */
@@ -29,7 +30,7 @@ drop procedure if exists addPayment;
 /* ------ Drop functions ------*/
 drop function if exists calculateFreeSeats;
 drop function if exists calculatePrice;
-
+set foreign_key_checks = 1;
 
 
 /* ------ Create tables ------ */
@@ -75,7 +76,7 @@ constraint pk_contact
 primary key (passport_number));
     
 create table Flight(
-flight_number int auto_increment,
+flight_number int not null auto_increment,
 week_id int,
 week_number int,
 constraint pk_flight
@@ -160,7 +161,7 @@ alter table Reserved_passengers add constraint fk_reserved_passengers_passport_n
 
 
 /* ------ Create procedures for populating the database with flights and more ------ */
-delimiter //
+DELIMITER //
 
 create procedure addYear (in year int, in factor double)
 begin
@@ -179,13 +180,13 @@ end;
 create procedure addDestination (in airport_code varchar(3), in name varchar(30), in country varchar(30))
 begin
     insert into Airport (airport_code, airport_name, country)
-    values (code, name, country);
+    values (airport_code, name, country);
 end;
 //
 
 create procedure addRoute (in departure_airport_code VARCHAR(3), in arrival_airport_code VARCHAR(3), in year int, in routeprice double)
 begin
-    insert into Route (departure, arrival, year_id, route_price)
+    insert into Route (departure, arrival, year_id, routeprice)
     values (departure_airport_code, arrival_airport_code, year, routeprice);
 end;
 //
@@ -195,24 +196,25 @@ begin
 	declare week_nr int;
     set week_nr = 1;
     
-    insert into Weekly_schedule(week_id, departure_time, route, day)
-    values (null, departuretime,
+    insert into Weekly_schedule(Weekly_schedule.departure_time, Weekly_schedule.route, Weekly_schedule.day)
+    values (departuretime,
     (select route_id from Route where departure_airport_code = departure and arrival_airport_code = arrival and year = year_id)
     , day);
     
-    while week_nr <= 52 do
-		insert into Flight values (null, week_nr, (select max(week_id) from Weekly_schedule));
+    repeat
+		insert into Flight (Flight.week_number, Flight.week_id)
+        values (week_nr, (select max(week_id) from Weekly_schedule));
         set week_nr = week_nr + 1;
-	end while;
+	until week_nr = 52
+	end repeat;
 end;
 //
 
-delimiter ;
 
 
 
 /* ------ Create functions ------ */
-delimiter //
+
 create function calculateFreeSeats(flightnumber int)
 returns int
 begin
@@ -248,12 +250,9 @@ begin
 end;
 //
 
-delimiter ;
-
 
 
 /* ------ Create trigger ------ */
-delimiter //
 
 create trigger trig
 before insert on Has_ticket for each row
@@ -268,12 +267,9 @@ begin
 end;
 //
 
-delimiter ;
-
 
 
 /* ------ Create procedures for creating and handling a reservation from the front end ------ */
-delimiter //
 
 create procedure addReservation (in departure_airport_code varchar(3), in arrival_airport_code varchar(3),
 in input_year int, in input_week int, in input_day varchar(30), in dep_time time, in number_of_passengers int, out output_reservation_nr int)
@@ -282,9 +278,18 @@ begin
     declare flight_nr int default 0;
     declare free_seats int;
 
-	select flight_number into flight_nr from Flight where week_number = input_week and week_id =
-    (select week_id from Weekly_schedule where departure_time = dep_time and day = input_day and route =
-    (select route_id from Route where year_id = input_year and arrival = arrival_airport_code and departure = departure_airport_code));
+	/*
+	select f.flight_number into flight_nr from Flight f
+    where f.week_number = input_week and f.week_id =
+    (select ws.week_id from Weekly_schedule ws where ws.departure_time = dep_time and ws.day = input_day and ws.route =
+    (select r.route_id from Route r where r.year_id = input_year and r.arrival = arrival_airport_code and r.departure = departure_airport_code));
+	*/
+
+    select f.flight_number into flight_nr from Flight f
+	join Weekly_schedule ws on f.week_id = ws.week_id
+	join Route r on ws.route = r.route_id
+	where f.week_number = input_week and ws.departure_time = dep_time and ws.day = input_day
+	  and r.year_id = input_year and r.arrival = arrival_airport_code and r.departure = departure_airport_code;
     
     if flight_nr = 0 then
 		select "There exist no flight for the given route, date and time" as "Message";
@@ -292,12 +297,12 @@ begin
         select calculateFreeSeats(flight_nr) into free_seats;
         if free_seats < number_of_passengers then
             select "There are not enough seats available on the chosen flight" as "Message";
-            set reservation_number = null;
+            set output_reservation_nr = null;
         else
             insert into Reservation (Reservation.flight)
             values (flight_nr);
-            set reservationnumber = last_insert_id(); /*Using auto increment on reservation_number in Reservation so just take last inserted*/
-        end if;
+            select last_insert_id() into output_reservation_nr ;
+            end if;
     end if;
 end;
 //
@@ -378,15 +383,16 @@ begin
 end;
 //
 
+DELIMITER ;
 
 /* ------ Create view ------ */
 create view allFlights as
 	select departure_airport.airport_name as "departure_city_name", arrival_airport.airport_name as "destination_city_name",
-	weekly_schedule.departure_time as "departure_time", Weekly_schedule.day as "departure_day", Flight.week_number as "departure_week", Day.year as "departure_year",
+	departure_time as "departure_time", day as "departure_day", week_number as "departure_week", year as "departure_year",
 	calculateFreeSeats(Flight.flight_number) as "nr_of_free_seats", calculatePrice(Flight.flight_number) as "current_price_per_seat"
     from Airport as departure_airport, Airport as arrival_airport, Weekly_schedule, Flight, Day
-    where departure_airport.airportcode = (select departure from Route where route_id = Weekly_schedule.route)
-    and arrival_airport.airportcode = (select arrival from Route where route_id = Weekly_schedule.route)
+    where departure_airport.airport_code = (select departure from Route where route_id = Weekly_schedule.route)
+    and arrival_airport.airport_code = (select arrival from Route where route_id = Weekly_schedule.route)
     and Weekly_schedule.week_id = Flight.week_id
     and Weekly_schedule.day = Day.day_id;
 
@@ -419,7 +425,27 @@ Which will lead to avoiding the need to redeploy front-end code.
 
 
 /* ------ Question 9 ------ */
+/*
+a) In session A, add a new reservation.
+b) Is this reservation visible in session B? Why? Why not?
 
+Answer:
+Since we started a transaction, changes are not visible in the second terminal window that is session B, because each session is locked.
+We need to first commit the transaction to make the changes visible and update the database.
+*/
+
+/*
+c) What happens if you try to modify the reservation from A in B? Explain what
+happens and why this happens and how this relates to the concept of isolation
+of transactions.
+
+Answer:
+We can't perform actions in window B due to the active transaction in window A,
+since session B is waiting for session A to commit.
+We tried to delete the reservation from session B, but nothing happened for a while and then
+ERROR 1205 (HY000): Lock wait timeout exceeded; try restarting transaction, occured.
+We then performed commit from session A, and session B could thereafter modify the reservation by deleting the last one added.
+*/
 
 
 /* ------ Question 10 ------ */
