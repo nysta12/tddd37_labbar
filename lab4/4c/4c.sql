@@ -223,10 +223,17 @@ $$
 create function calculateFreeSeats(flightnumber int)
 returns int
 begin
-    declare booked_seats int;
+    declare booked_seats int default 0;
     declare free_seats int;
-    set booked_seats = (select count(*) from Booking where reservation_number in (select reservation_number from Reservation where flight = flightnumber));
-    set free_seats = 40 - booked_seats;
+    declare total_seats int default 40;
+    
+    select count(*)
+    into booked_seats from Has_ticket ht
+    join Booking b on ht.booking = b.reservation_number
+    join Reservation r on b.reservation_number = r.reservation_number
+    where r.flight = flightnumber;
+    
+    set free_seats = total_seats - booked_seats;
     return free_seats;
 end;
 $$
@@ -251,7 +258,7 @@ begin
     
     set total_price = route_p * pricing_f * (((40 - calculateFreeSeats(flightnumber)) + 1) / 40) * profit_f;
 
-    return round(total_price, 2);
+    return round(total_price, 3);
 end;
 $$
 
