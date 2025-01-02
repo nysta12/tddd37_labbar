@@ -1,4 +1,5 @@
-set foreign_key_checks = 0;
+set foreign_key_checks = 0; #Disable checks for foreign keys when dropping tables
+
 /* ------ Drop tables ------*/
 drop table if exists Reservation;
 drop table if exists Booking;
@@ -30,7 +31,11 @@ drop procedure if exists addPayment;
 /* ------ Drop functions ------*/
 drop function if exists calculateFreeSeats;
 drop function if exists calculatePrice;
-set foreign_key_checks = 1;
+
+/* ------ Drop view ------*/
+drop view if exists allFlights;
+
+set foreign_key_checks = 1; #Enable checks for foreign keys
 
 
 /* ------ Create tables ------ */
@@ -62,7 +67,7 @@ constraint pk_passenger
 primary key(passport_number));
 
 create table Has_ticket(
-ticket_number int not null,
+ticket_number int,
 booking int,
 passenger int,
 constraint pk_has_ticket
@@ -161,35 +166,35 @@ alter table Reserved_passengers add constraint fk_reserved_passengers_passport_n
 
 
 /* ------ Create procedures for populating the database with flights and more ------ */
-DELIMITER //
+delimiter $$
 
 create procedure addYear (in year int, in factor double)
 begin
     insert into Year (year_id, profit_factor)
     values (year, factor);
 end;
-//
+$$
 
 create procedure addDay (in year int, in day varchar(30), in factor double)
 begin
     insert into Day (day_id, year, pricing_factor)
     values (day, year, factor);
 end;
-//
+$$
 
 create procedure addDestination (in airport_code varchar(3), in name varchar(30), in country varchar(30))
 begin
     insert into Airport (airport_code, airport_name, country)
     values (airport_code, name, country);
 end;
-//
+$$
 
-create procedure addRoute (in departure_airport_code VARCHAR(3), in arrival_airport_code VARCHAR(3), in year int, in routeprice double)
+create procedure addRoute (in departure_airport_code varchar(3), in arrival_airport_code varchar(3), in year int, in routeprice double)
 begin
     insert into Route (departure, arrival, year_id, routeprice)
     values (departure_airport_code, arrival_airport_code, year, routeprice);
 end;
-//
+$$
 
 create procedure addFlight (in departure_airport_code varchar(3), in arrival_airport_code varchar(3), in year int, in day varchar(30), in departuretime time)
 begin
@@ -205,10 +210,10 @@ begin
 		insert into Flight (Flight.week_number, Flight.week_id)
         values (week_nr, (select max(week_id) from Weekly_schedule));
         set week_nr = week_nr + 1;
-	until week_nr = 52
+	until week_nr > 52
 	end repeat;
 end;
-//
+$$
 
 
 
@@ -224,31 +229,31 @@ begin
     set free_seats = 40 - booked_seats;
     return free_seats;
 end;
-//
+$$
 
 
 create function calculatePrice(flightnumber int)
 returns double
 begin
-    declare w_id int;
-    declare r int;
-    declare d int;
-    declare y int;
-    declare rp double;
-    declare wf double;
-    declare pf double;
+    declare route_p double;
+    declare profit_f double;
+    declare pricing_f double;
     declare total_price double;
     
-    select week_id into w_id from Flight where Flight.flight_number = flightnumber;
-    select route, day into r, d from Weekly_schedule where week_id = w_id;
-    select route_price into rp from Route where route_id = r;
-    select pricing_factor, year into wf, y from Day where day_id = d;
-    select profit_factor into pf from Year where year_id = y;
+    select r.routeprice, d.pricing_factor, y.profit_factor
+    into  route_p, pricing_f, profit_f
+    from Flight f
+    join Weekly_schedule ws on f.week_id = ws.week_id
+    join Route r on ws.route = r.route_id
+    join Day d on ws.day = d.day_id
+    join Year y on d.year = y.year_id
+    where f.flight_number = flightnumber;
     
-	return round((r * wf * (((40 - calculateFreeSeats(flightnumber)) + 1) / 40) * pf), 2);
+    set total_price = route_p * pricing_f * (((40 - calculateFreeSeats(flightnumber)) + 1) / 40) * profit_f;
 
+    return round(total_price, 2);
 end;
-//
+$$
 
 
 
@@ -265,14 +270,15 @@ begin
     end repeat;
     set new.ticket_number = t_nr;
 end;
-//
+$$
 
 
 
 /* ------ Create procedures for creating and handling a reservation from the front end ------ */
 
 create procedure addReservation (in departure_airport_code varchar(3), in arrival_airport_code varchar(3),
-in input_year int, in input_week int, in input_day varchar(30), in dep_time time, in number_of_passengers int, out output_reservation_nr int)
+in input_year int, in input_week int, in input_day varchar(30), in dep_time time,
+in number_of_passengers int, out output_reservation_nr int)
 begin
 	
     declare flight_nr int default 0;
@@ -284,12 +290,14 @@ begin
     (select ws.week_id from Weekly_schedule ws where ws.departure_time = dep_time and ws.day = input_day and ws.route =
     (select r.route_id from Route r where r.year_id = input_year and r.arrival = arrival_airport_code and r.departure = departure_airport_code));
 	*/
-
+    
+    
     select f.flight_number into flight_nr from Flight f
 	join Weekly_schedule ws on f.week_id = ws.week_id
 	join Route r on ws.route = r.route_id
 	where f.week_number = input_week and ws.departure_time = dep_time and ws.day = input_day
 	  and r.year_id = input_year and r.arrival = arrival_airport_code and r.departure = departure_airport_code;
+
     
     if flight_nr = 0 then
 		select "There exist no flight for the given route, date and time" as "Message";
@@ -305,7 +313,7 @@ begin
             end if;
     end if;
 end;
-//
+$$
 
 
 create procedure addPassenger (in reservation_nr int, in passport_nr int, in passenger_name varchar(30))
@@ -325,7 +333,7 @@ begin
 		end if;
 	end if;
 end;
-//
+$$
 
 
 create procedure addContact (in reservation_nr int, in passport_nr int, in email varchar(30), in phone bigint)
@@ -339,11 +347,14 @@ begin
 			if not exists (select 1 from Contact where passport_number = passport_nr) then
 				insert into Contact (Contact.email, Contact.phone_number, Contact.passport_number)
 				values(email, phone, passport_nr);
+                
+                update Reservation
+				set contact = passport_nr where reservation_number = reservation_nr;
 			end if;
 		end if;
 	end if;
 end;
-//
+$$
 
 
 create procedure addPayment (in reservation_nr int, in cardholder_name varchar(30), in credit_card_number bigint)
@@ -352,11 +363,13 @@ begin
     declare free_seats int;
     declare flight_nr int;
     declare price_reservation int;
+    declare price int;
+    declare p_id int;
     
 	if not exists (select 1 from Reservation where reservation_number = reservation_nr) then
 		select "The given reservation number does not exist" as "Message";
 	else
-		if not exists (select contact from Reservation where reservation_number = reservation_nr) then
+		if not exists (select 1 from Contact where passport_number = (select contact from Reservation where reservation_number = reservation_nr)) then
 			select "The reservation has no contact yet" as "Message";
 		else
 			select count(*) into nr_passengers_reservation from Reserved_passengers where reservation_number = reservation_nr;
@@ -364,26 +377,29 @@ begin
 			set free_seats = calculateFreeSeats(flight_nr);
             
             if (free_seats >= nr_passengers_reservation) then
-				set price_reservation = nr_passengers_reservation * calculatePrice(flight_nr);
+				set price = calculatePrice(flight_nr);
+				set price_reservation = nr_passengers_reservation * price;
                 
 				insert into Payment (Payment.card_holder, Payment.card_number)
 				values (cardholder_name, credit_card_number);
                 
+                select last_insert_id() into p_id;
 				insert into Booking (Booking.person_paying, Booking.paid_price, Booking.reservation_number)
-                values (max(Payment.payment_id), price_reservation, reservation_nr); 
+                values (p_id, price_reservation, reservation_nr); 
         
 				insert into Has_ticket (Has_ticket.booking, Has_ticket.passenger)
 				select reservation_number, passport_number from Reserved_passengers where reservation_number = reservation_nr;
 			else
+				delete from Reserved_passengers where reservation_number = reservation_nr;
 				delete from Reservation where reservation_number = reservation_nr;
 				select "There are not enough seats available on the flight anymore, deleting reservation" as "Message";
             end if;
 		end if;
 	end if;
 end;
-//
+$$
 
-DELIMITER ;
+delimiter ;
 
 /* ------ Create view ------ */
 create view allFlights as
@@ -403,10 +419,9 @@ create view allFlights as
 
 Answer: There are multiple ways you can protect that information, first of you could limit the access by assigning special access privileges.
 You could also encrypt the information or use hashing on sensitive and vulnerable credit card data.
-*/
 
 
-/* b) Give three advantages of using stored procedures in the database (and thereby
+b) Give three advantages of using stored procedures in the database (and thereby
 execute them on the server) instead of writing the same functions in the
 frontend of the system (in for example JavaScript on a Web page)?
 
@@ -432,9 +447,8 @@ b) Is this reservation visible in session B? Why? Why not?
 Answer:
 Since we started a transaction, changes are not visible in the second terminal window that is session B, because each session is locked.
 We need to first commit the transaction to make the changes visible and update the database.
-*/
 
-/*
+
 c) What happens if you try to modify the reservation from A in B? Explain what
 happens and why this happens and how this relates to the concept of isolation
 of transactions.
@@ -449,7 +463,31 @@ We then performed commit from session A, and session B could thereafter modify t
 
 
 /* ------ Question 10 ------ */
+/*
+a) Did overbooking occur when the scripts were executed? If so, why? If not, why not?
 
+Answer:
+
+
+b) Can an overbooking theoretically occur? If an overbooking is possible,
+in what order must the lines of code in your procedures/functions be executed.
+
+Answer:
+
+
+c) Try to make the theoretical case occur in reality by simulating that multiple sessions call the procedure at the same time.
+To specify the order in which the lines of code are executed use the MySQL query SELECT sleep(5);
+which makes the session sleep for 5 seconds.
+Note that it is not always possible to make the theoretical case occur, if not, motivate why.
+
+Answer:
+
+
+d)
+
+Answer:
+
+*/
 
 
 
