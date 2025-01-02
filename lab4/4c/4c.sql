@@ -474,12 +474,14 @@ We then performed commit from session A, and session B could thereafter modify t
 a) Did overbooking occur when the scripts were executed? If so, why? If not, why not?
 
 Answer:
-
+Overbooking did not occur when the scripts were executed since on of the scripts showed the error, “The reservation has no contact yet”.
+Which indicates by itself that it handled the concurrency.
 
 b) Can an overbooking theoretically occur? If an overbooking is possible,
 in what order must the lines of code in your procedures/functions be executed.
 
 Answer:
+A overbooking could theoretically occur if the check for free seats is done in both scripts before a booking is done.
 
 
 c) Try to make the theoretical case occur in reality by simulating that multiple sessions call the procedure at the same time.
@@ -488,12 +490,14 @@ which makes the session sleep for 5 seconds.
 Note that it is not always possible to make the theoretical case occur, if not, motivate why.
 
 Answer:
-
+Could not make the theoretical case work with sleep.
 
 d)
 
 Answer:
 
+
+commit;
 */
 
 
